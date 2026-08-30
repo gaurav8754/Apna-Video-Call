@@ -1,7 +1,6 @@
-import React, { useEffect, useRef, useState } from 'react'
+import React, { useContext, useEffect, useRef, useState } from 'react'
 import io from "socket.io-client";
-import { Badge, IconButton, TextField } from '@mui/material';
-import { Button } from '@mui/material';
+import { Badge, IconButton, TextField, Box, Paper, Typography, Button } from '@mui/material';
 import VideocamIcon from '@mui/icons-material/Videocam';
 import VideocamOffIcon from '@mui/icons-material/VideocamOff'
 import styles from "../styles/videoComponent.module.css";
@@ -12,6 +11,7 @@ import ScreenShareIcon from '@mui/icons-material/ScreenShare';
 import StopScreenShareIcon from '@mui/icons-material/StopScreenShare'
 import ChatIcon from '@mui/icons-material/Chat'
 import server from '../environment';
+import { AuthContext } from '../contexts/AuthContext';
 
 const server_url = server;
 
@@ -24,6 +24,7 @@ const peerConfigConnections = {
 }
 
 export default function VideoMeetComponent() {
+    const { addToUserHistory } = useContext(AuthContext);
 
     var socketRef = useRef();
     let socketIdRef = useRef();
@@ -34,41 +35,29 @@ export default function VideoMeetComponent() {
 
     let [audioAvailable, setAudioAvailable] = useState(true);
 
-    let [video, setVideo] = useState([]);
+    let [video, setVideo] = useState(true);
 
-    let [audio, setAudio] = useState();
+    let [audio, setAudio] = useState(true);
 
-    let [screen, setScreen] = useState();
+    let [screen, setScreen] = useState(false);
 
     let [showModal, setModal] = useState(true);
 
-    let [screenAvailable, setScreenAvailable] = useState();
+    let [screenAvailable, setScreenAvailable] = useState(false);
 
-    let [messages, setMessages] = useState([])
+    let [messages, setMessages] = useState([]);
 
     let [message, setMessage] = useState("");
 
-    let [newMessages, setNewMessages] = useState(3);
+    let [newMessages, setNewMessages] = useState(0);
 
     let [askForUsername, setAskForUsername] = useState(true);
 
-    let [username, setUsername] = useState("");
+    let [username, setUsername] = useState(localStorage.getItem("username") || "");
 
-    const videoRef = useRef([])
+    const videoRef = useRef([]);
 
-    let [videos, setVideos] = useState([])
-
-    // TODO
-    // if(isChrome() === false) {
-
-
-    // }
-
-    useEffect(() => {
-        console.log("HELLO")
-        getPermissions();
-
-    })
+    let [videos, setVideos] = useState([]);
 
     let getDislayMedia = () => {
         if (screen) {
@@ -122,8 +111,9 @@ export default function VideoMeetComponent() {
     };
 
     useEffect(() => {
-    console.log("Initializing Permissions");
-    getPermissions();
+        console.log("Initializing Permissions");
+        getPermissions();
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []); // ✅ runs only once
 
     let getMedia = () => {
@@ -404,6 +394,7 @@ let handleAudio = () => {
         if (screen !== undefined) {
             getDislayMedia();
         }
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [screen])
     let handleScreen = () => {
         setScreen(!screen);
@@ -417,13 +408,16 @@ let handleAudio = () => {
         window.location.href = "/"
     }
 
+    // eslint-disable-next-line no-unused-vars
     let openChat = () => {
         setModal(true);
         setNewMessages(0);
     }
+    // eslint-disable-next-line no-unused-vars
     let closeChat = () => {
         setModal(false);
     }
+    // eslint-disable-next-line no-unused-vars
     let handleMessage = (e) => {
         setMessage(e.target.value);
     }
@@ -431,48 +425,198 @@ let handleAudio = () => {
     const addMessage = (data, sender, socketIdSender) => {
         setMessages((prevMessages) => [
             ...prevMessages,
-            { sender: sender, data: data }
+            { sender: sender, data: data, socketIdSender: socketIdSender }
         ]);
         if (socketIdSender !== socketIdRef.current) {
             setNewMessages((prevNewMessages) => prevNewMessages + 1);
         }
     };
 
-
-
     let sendMessage = () => {
-        console.log(socketRef.current);
-        socketRef.current.emit('chat-message', message, username)
+        if (!message.trim()) return;
+        const senderName = username.trim() || localStorage.getItem("username") || "You";
+        socketRef.current.emit('chat-message', message, senderName);
         setMessage("");
-
-        // this.setState({ message: "", sender: username })
-    }
+    };
 
     
-    let connect = () => {
+    let connect = async () => {
         setAskForUsername(false);
         getMedia();
-    }
+        try {
+            const pathParts = window.location.pathname.split("/").filter(Boolean);
+            const meetingCode = pathParts[pathParts.length - 1];
+            if (meetingCode && addToUserHistory) {
+                await addToUserHistory(meetingCode);
+            }
+        } catch (e) {
+            console.error("Error saving meeting to history:", e);
+        }
+    };
 
 
     return (
         <div>
 
             {askForUsername === true ?
+                <Box
+                    sx={{
+                        minHeight: "100vh",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        backgroundColor: "#ffffff",
+                        backgroundImage: "radial-gradient(circle at 50% 30%, rgba(217, 117, 0, 0.05) 0%, transparent 60%)",
+                        padding: 3,
+                    }}
+                >
+                    <Paper
+                        elevation={12}
+                        sx={{
+                            maxWidth: 520,
+                            width: "100%",
+                            borderRadius: "24px",
+                            padding: { xs: 3, sm: 4 },
+                            backgroundColor: "#09090b",
+                            border: "1px solid rgba(217, 117, 0, 0.3)",
+                            boxShadow: "0 25px 50px -12px rgba(0, 0, 0, 0.8), 0 0 30px rgba(217, 117, 0, 0.2)",
+                            color: "#ffffff",
+                            textAlign: "center",
+                        }}
+                    >
+                        <Typography
+                            variant="h4"
+                            sx={{
+                                fontWeight: 700,
+                                color: "#ffffff",
+                                mb: 1,
+                                letterSpacing: "-0.5px",
+                            }}
+                        >
+                            Entering Lobby
+                        </Typography>
 
-                <div>
+                        <Typography
+                            variant="body2"
+                            sx={{
+                                color: "#a1a1aa",
+                                mb: 3.5,
+                            }}
+                        >
+                            Check your camera preview and enter your display name to connect.
+                        </Typography>
 
+                        {/* Video Camera Preview Card */}
+                        <Box
+                            sx={{
+                                position: "relative",
+                                width: "100%",
+                                borderRadius: "16px",
+                                overflow: "hidden",
+                                border: "1px solid rgba(217, 117, 0, 0.2)",
+                                boxShadow: "0 12px 24px -6px rgba(0, 0, 0, 0.6)",
+                                mb: 3.5,
+                                aspectRatio: "16 / 9",
+                                backgroundColor: "#000000",
+                            }}
+                        >
+                            <video 
+                                ref={ref => {
+                                    if (ref) {
+                                        localVideoref.current = ref;
+                                        if (window.localStream && ref.srcObject !== window.localStream) {
+                                            ref.srcObject = window.localStream;
+                                        }
+                                    }
+                                }} 
+                                autoPlay 
+                                muted
+                                style={{
+                                    width: "100%",
+                                    height: "100%",
+                                    objectFit: "cover",
+                                    transform: "scaleX(-1)",
+                                }}
+                            ></video>
+                            <Box
+                                sx={{
+                                    position: "absolute",
+                                    bottom: 12,
+                                    left: 12,
+                                    backgroundColor: "rgba(9, 9, 11, 0.8)",
+                                    backdropFilter: "blur(6px)",
+                                    padding: "6px 14px",
+                                    borderRadius: "20px",
+                                    fontSize: "0.8rem",
+                                    fontWeight: 500,
+                                    color: "#ffffff",
+                                    border: "1px solid rgba(255, 255, 255, 0.1)",
+                                    display: "flex",
+                                    alignItems: "center",
+                                    gap: 1,
+                                }}
+                            >
+                                <span style={{ width: 8, height: 8, borderRadius: "50%", backgroundColor: "#10b981", display: "inline-block" }}></span>
+                                Camera Preview
+                            </Box>
+                        </Box>
 
-                    <h2>Enter into Lobby </h2>
-                    <TextField id="outlined-basic" label="Username" value={username} onChange={e => setUsername(e.target.value)} variant="outlined" />
-                    <Button variant="contained" onClick={connect}>Connect</Button>
-
-
-                    <div>
-                        <video ref={localVideoref} autoPlay muted></video>
-                    </div>
-
-                </div> :
+                        {/* Input Box & Connect Button */}
+                        <Box
+                            sx={{
+                                display: "flex",
+                                flexDirection: { xs: "column", sm: "row" },
+                                gap: 2,
+                                alignItems: "stretch",
+                            }}
+                        >
+                            <TextField 
+                                fullWidth
+                                id="outlined-basic" 
+                                label="Your Display Name" 
+                                value={username} 
+                                onChange={e => setUsername(e.target.value)} 
+                                variant="outlined" 
+                                sx={{
+                                    "& .MuiOutlinedInput-root": {
+                                        borderRadius: "12px",
+                                        color: "#ffffff",
+                                        fontWeight: 600,
+                                        backgroundColor: "rgba(24, 24, 27, 0.6)",
+                                        "& fieldset": { borderColor: "rgba(255, 255, 255, 0.15)" },
+                                        "&:hover fieldset": { borderColor: "#FF8C00" },
+                                        "&.Mui-focused fieldset": { borderColor: "#D97500" },
+                                    },
+                                    "& .MuiInputLabel-root": { color: "#a1a1aa" },
+                                    "& .MuiInputLabel-root.Mui-focused": { color: "#D97500" },
+                                }}
+                            />
+                            <Button 
+                                variant="contained" 
+                                onClick={connect}
+                                sx={{
+                                    px: 4,
+                                    py: 1.5,
+                                    borderRadius: "12px",
+                                    fontWeight: 700,
+                                    fontSize: "0.95rem",
+                                    textTransform: "none",
+                                    whiteSpace: "nowrap",
+                                    background: "linear-gradient(135deg, #FF8C00 0%, #D97500 100%)",
+                                    boxShadow: "0 8px 20px -4px rgba(217, 117, 0, 0.5)",
+                                    transition: "all 0.3s ease",
+                                    "&:hover": {
+                                        background: "linear-gradient(135deg, #e07b00 0%, #c66a00 100%)",
+                                        boxShadow: "0 12px 25px -4px rgba(217, 117, 0, 0.7)",
+                                        transform: "translateY(-1px)",
+                                    },
+                                }}
+                            >
+                                Connect & Join
+                            </Button>
+                        </Box>
+                    </Paper>
+                </Box> :
 
 
                 <div className={styles.meetVideoContainer}>
@@ -485,14 +629,17 @@ let handleAudio = () => {
                             <div className={styles.chattingDisplay}>
 
                                 {messages.length !== 0 ? messages.map((item, index) => {
+                                    const isMe = item.socketIdSender === socketIdRef.current || (item.sender && item.sender === username);
+                                    const displayName = item.sender ? item.sender : (isMe ? "You" : "Participant");
 
-                                    console.log(messages)
                                     return (
-                                        <div style={{ marginBottom: "20px" }} key={index}>
-                                            <p style={{ fontWeight: "bold" }}>{item.sender}</p>
-                                            <p>{item.data}</p>
+                                        <div style={{ marginBottom: "16px" }} key={index}>
+                                            <p style={{ fontWeight: "bold", color: isMe ? "#4f46e5" : "#0f172a", marginBottom: "2px" }}>
+                                                {displayName} {isMe ? "(You)" : ""}
+                                            </p>
+                                            <p style={{ margin: 0, color: "#334155" }}>{item.data}</p>
                                         </div>
-                                    )
+                                    );
                                 }) : <p>No Messages Yet</p>}
 
 
@@ -532,20 +679,32 @@ let handleAudio = () => {
                     </div>
 
 
-                    <video className={styles.meetUserVideo} ref={localVideoref} autoPlay muted></video>
+                    <video 
+                        className={styles.meetUserVideo} 
+                        ref={ref => {
+                            if (ref) {
+                                localVideoref.current = ref;
+                                if (window.localStream && ref.srcObject !== window.localStream) {
+                                    ref.srcObject = window.localStream;
+                                }
+                            }
+                        }} 
+                        autoPlay 
+                        muted
+                    ></video>
 
                     <div className={styles.conferenceView}>
                         {videos.map((video) => (
                             <div key={video.socketId}>
                                 <video
-
                                     data-socket={video.socketId}
                                     ref={ref => {
-                                        if (ref && video.stream) {
+                                        if (ref && video.stream && ref.srcObject !== video.stream) {
                                             ref.srcObject = video.stream;
                                         }
                                     }}
                                     autoPlay
+                                    playsInline
                                 >
                                 </video>
                             </div>

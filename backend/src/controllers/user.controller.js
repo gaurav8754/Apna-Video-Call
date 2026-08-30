@@ -70,11 +70,17 @@ const getUserHistory = async (req, res) => {
     const { token } = req.query;
 
     try {
+        if (!token) {
+            return res.status(httpStatus.UNAUTHORIZED).json({ message: "No token provided" });
+        }
         const user = await User.findOne({ token: token });
-        const meetings = await Meeting.find({ user_id: user.username })
-        res.json(meetings)
+        if (!user) {
+            return res.status(httpStatus.NOT_FOUND).json({ message: "User Not Found" });
+        }
+        const meetings = await Meeting.find({ user_id: user.username });
+        return res.json(meetings);
     } catch (e) {
-        res.json({ message: `Something went wrong ${e}` })
+        return res.status(500).json({ message: `Something went wrong: ${e}` });
     }
 }
 
@@ -82,20 +88,59 @@ const addToHistory = async (req, res) => {
     const { token, meeting_code } = req.body;
 
     try {
+        if (!token || !meeting_code) {
+            return res.status(400).json({ message: "Token and meeting code are required" });
+        }
         const user = await User.findOne({ token: token });
+        if (!user) {
+            return res.status(httpStatus.NOT_FOUND).json({ message: "User Not Found" });
+        }
 
         const newMeeting = new Meeting({
             user_id: user.username,
             meetingCode: meeting_code
-        })
+        });
 
         await newMeeting.save();
 
-        res.status(httpStatus.CREATED).json({ message: "Added code to history" })
+        return res.status(httpStatus.CREATED).json({ message: "Added code to history" });
     } catch (e) {
-        res.json({ message: `Something went wrong ${e}` })
+        return res.status(500).json({ message: `Something went wrong: ${e}` });
     }
-}
+};
+
+const deleteHistory = async (req, res) => {
+    const { id } = req.params;
+    const { token } = req.query;
+
+    try {
+        if (!token || !id) {
+            return res.status(400).json({ message: "Token and history ID are required" });
+        }
+        const user = await User.findOne({ token: token });
+        if (!user) {
+            return res.status(httpStatus.NOT_FOUND).json({ message: "User Not Found" });
+        }
+
+        const meeting = await Meeting.findById(id);
+        if (!meeting) {
+            return res.status(httpStatus.NOT_FOUND).json({ message: "Meeting history not found" });
+        }
+
+        // Admin check: gaurav shukla (gauravshuklameja) or owner of the history item
+        const isAdmin = user.username.toLowerCase().includes("gaurav") || 
+                        user.name.toLowerCase().includes("gaurav");
+
+        if (!isAdmin && meeting.user_id !== user.username) {
+            return res.status(httpStatus.FORBIDDEN).json({ message: "Only admin or owner can delete this history" });
+        }
+
+        await Meeting.findByIdAndDelete(id);
+        return res.json({ message: "History item deleted successfully" });
+    } catch (e) {
+        return res.status(500).json({ message: `Something went wrong: ${e}` });
+    }
+};
 
 
-export { login, register, getUserHistory, addToHistory }
+export { login, register, getUserHistory, addToHistory, deleteHistory }
