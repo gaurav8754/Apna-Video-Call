@@ -4,7 +4,9 @@ import dotenv from "dotenv";
 import dns from "node:dns";
 
 dotenv.config(); 
-dns.setServers(["8.8.8.8", "8.8.4.4"]); 
+if (process.platform === "win32") {
+    dns.setServers(["8.8.8.8", "8.8.4.4"]);
+} 
 
 import { Server } from "socket.io";
 
