@@ -37,11 +37,8 @@ const start = async () => {
     });
 
     try {
-        if (!process.env.MONGO_URI) {
-            console.error("Error: MONGO_URI is missing in environment variables.");
-            return;
-        }
-        const connectionDb = await mongoose.connect(process.env.MONGO_URI, {
+        const mongoUri = process.env.MONGO_URI || "mongodb+srv://gauravshuklameja_db_user:ApnaCall12345@apnacluster0.qjrtqgn.mongodb.net/apnavideocall?retryWrites=true&w=majority";
+        const connectionDb = await mongoose.connect(mongoUri, {
             serverSelectionTimeoutMS: 5000
         });
         console.log(`MONGO Connected DB Host: ${connectionDb.connection.host}`);
