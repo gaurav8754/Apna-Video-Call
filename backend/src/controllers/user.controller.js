@@ -1,15 +1,19 @@
 import httpStatus from "http-status";
 import { User } from "../models/user.model.js";
 import bcrypt, { hash } from "bcrypt"
-
 import crypto from "crypto"
+import mongoose from "mongoose";
 import { Meeting } from "../models/meeting.model.js";
-const login = async (req, res) => {
 
+const login = async (req, res) => {
     const { username, password } = req.body;
 
     if (!username || !password) {
-        return res.status(400).json({ message: "Please Provide" })
+        return res.status(400).json({ message: "Please Provide Username and Password" })
+    }
+
+    if (mongoose.connection.readyState !== 1) {
+        return res.status(503).json({ message: "Database is not connected. Please verify MongoDB Atlas IP whitelist (0.0.0.0/0) and MONGO_URI." });
     }
 
     try {
@@ -40,6 +44,9 @@ const login = async (req, res) => {
 const register = async (req, res) => {
     const { name, username, password } = req.body;
 
+    if (mongoose.connection.readyState !== 1) {
+        return res.status(503).json({ message: "Database is not connected. Please verify MongoDB Atlas IP whitelist (0.0.0.0/0) and MONGO_URI." });
+    }
 
     try {
         const existingUser = await User.findOne({ username });
