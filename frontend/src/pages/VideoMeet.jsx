@@ -10,6 +10,7 @@ import MicOffIcon from '@mui/icons-material/MicOff'
 import ScreenShareIcon from '@mui/icons-material/ScreenShare';
 import StopScreenShareIcon from '@mui/icons-material/StopScreenShare'
 import ChatIcon from '@mui/icons-material/Chat'
+import CloseIcon from '@mui/icons-material/Close'
 import server from '../environment';
 import { AuthContext } from '../contexts/AuthContext';
 
@@ -90,11 +91,7 @@ export default function VideoMeetComponent() {
                 console.log('Audio permission denied');
             }
 
-            if (navigator.mediaDevices.getDisplayMedia) {
-                setScreenAvailable(true);
-            } else {
-                setScreenAvailable(false);
-            }
+            setScreenAvailable(true);
 
             if (videoAvailable || audioAvailable) {
                 const userMediaStream = await navigator.mediaDevices.getUserMedia({ video: videoAvailable, audio: audioAvailable });
@@ -397,6 +394,10 @@ let handleAudio = () => {
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [screen])
     let handleScreen = () => {
+        if (!navigator.mediaDevices || !navigator.mediaDevices.getDisplayMedia) {
+            alert("Screen sharing is not supported on mobile browser engines. Please switch to a desktop browser (Chrome/Edge) to share screen.");
+            return;
+        }
         setScreen(!screen);
     }
 
@@ -624,7 +625,12 @@ let handleAudio = () => {
                     {showModal ? <div className={styles.chatRoom}>
 
                         <div className={styles.chatContainer}>
-                            <h1>Chat</h1>
+                            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "12px" }}>
+                                <h1 style={{ margin: 0, fontSize: "1.2rem", fontWeight: 700, color: "#0f172a" }}>Chat</h1>
+                                <IconButton size="small" onClick={() => setModal(false)} sx={{ color: "#64748b" }}>
+                                    <CloseIcon fontSize="small" />
+                                </IconButton>
+                            </div>
 
                             <div className={styles.chattingDisplay}>
 
