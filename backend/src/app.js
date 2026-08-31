@@ -28,16 +28,22 @@ app.use("/api/v1/users", userRoutes);
 
 const start = async () => {
     app.set("mongo_user", process.env.MONGO_USER);
-    const connectionDb = await mongoose.connect(process.env.MONGO_URI);
-    console.log(`MONGO Connected DB Host: ${connectionDb.connection.host}`)
-    server.listen(app.get("port"), () => {
-        console.log(`LISTENING ON PORT ${process.env.PORT}`);
+    
+    const port = app.get("port");
+    server.listen(port, () => {
+        console.log(`LISTENING ON PORT ${port}`);
     });
 
-
-
-}
-
-
+    try {
+        if (!process.env.MONGO_URI) {
+            console.error("Error: MONGO_URI is missing in environment variables.");
+            return;
+        }
+        const connectionDb = await mongoose.connect(process.env.MONGO_URI);
+        console.log(`MONGO Connected DB Host: ${connectionDb.connection.host}`);
+    } catch (err) {
+        console.error("MongoDB Connection Error:", err);
+    }
+};
 
 start();
